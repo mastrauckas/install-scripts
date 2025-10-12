@@ -227,7 +227,7 @@ function Main {
    Write-Debug "Line 2"
 
    # Update PowerShell profile
-   Update-PowerShellProfile -configRepoPath $ConfigRepoPath
+   Ensure-PowerShellProfileImportsConfig -configRepoPath $ConfigRepoPath
 
    Write-Debug "Line 3"
 
