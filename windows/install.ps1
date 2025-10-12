@@ -168,31 +168,30 @@ function Set-EnvironmentVariables {
    Write-Host "CONFIGURATION_REPOSITORY_PATH = $configRepoPath"
 }
 
-function Ensure-Pwsh7ProfileImport {
-   param([string]$importLine)
+function Update-PowerShell7Profile {
+   param([string]$configRepoPath)
 
    # Explicit PowerShell 7 profile path
    $pwsh7Profile = Join-Path $env:USERPROFILE "Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
 
-   # Create the profile if it doesn't exist
+   # Ensure the profile file exists
    if (-not (Test-Path $pwsh7Profile)) {
       Write-Host "PowerShell 7 profile not found. Creating profile at $pwsh7Profile..."
       New-Item -ItemType File -Path $pwsh7Profile -Force | Out-Null
    }
 
-   # Read existing content
-   $content = Get-Content $pwsh7Profile -ErrorAction SilentlyContinue
+   $importLine = "Import-Module `"$configRepoPath\powershell\main_script.ps1`""
 
-   # Add the import line at the top if not present
-   if (-not ($content -contains $importLine)) {
+   # Append import line if not already present
+   if (-not (Select-String -Path $pwsh7Profile -Pattern [regex]::Escape($importLine) -Quiet)) {
       Write-Host "Adding import line to PowerShell 7 profile..."
-      $newContent = @($importLine) + $content
-      Set-Content -Path $pwsh7Profile -Value $newContent
+      Add-Content -Path $pwsh7Profile -Value "`n$importLine"
    }
    else {
       Write-Host "Import line already exists in PowerShell 7 profile. No changes made."
    }
 }
+
 
 # --- Main workflow ---
 function Main {
@@ -225,7 +224,7 @@ function Main {
    Write-Debug "Line 2"
 
    # Update PowerShell profile
-   Ensure-Pwsh7ProfileImport -configRepoPath $ConfigRepoPath
+   Update-PowerShell7Profile -configRepoPath $ConfigRepoPath
 
    Write-Debug "Line 3"
 
