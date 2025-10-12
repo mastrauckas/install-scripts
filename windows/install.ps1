@@ -184,14 +184,14 @@ function Update-Pwsh7Profile {
    $importLine = "Import-Module `"$configRepoPath\powershell\main_script.ps1`""
 
    # Append the import line only if it doesn't already exist in the profile
-   if (-not (Select-String -Path $pwsh7Profile -Pattern [regex]::Escape($importLine) -Quiet)) {
-      Write-Host "Adding import line to PowerShell 7 profile..."
-      Add-Content -Path $pwsh7Profile -Value $importLine
-      Write-Host "Import line added successfully."
-   }
-   else {
-      Write-Host "Import line already exists in PowerShell 7 profile. No changes made."
-   }
+   # if (-not (Select-String -Path $pwsh7Profile -Pattern [regex]::Escape($importLine) -Quiet)) {
+   #    Write-Host "Adding import line to PowerShell 7 profile..."
+   #    Add-Content -Path $pwsh7Profile -Value $importLine
+   #    Write-Host "Import line added successfully."
+   # }
+   # else {
+   #    Write-Host "Import line already exists in PowerShell 7 profile. No changes made."
+   # }
 }
 
 
