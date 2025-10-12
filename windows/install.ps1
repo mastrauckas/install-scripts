@@ -5,6 +5,9 @@
 # -------------------------------
 # Windows Bootstrap Script (Modular)
 # -------------------------------
+# -------------------------------
+# Windows Bootstrap Script (Modular)
+# -------------------------------
 
 function Prompt-Paths {
    $defaultProjectsPath = "C:\Projects"
@@ -24,15 +27,25 @@ function Prompt-Paths {
    return @{ ProjectsPath = $projectsPath; ConfigPath = $configPath }
 }
 
-function Install-Chocolatey {
-   if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-      Write-Host "Installing Chocolatey..."
-      Set-ExecutionPolicy Bypass -Scope Process -Force
-      [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-      iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+function Install-PackageWinget {
+   param (
+      [string]$packageId,
+      [string]$packageName
+   )
+
+   if (-not (Get-Command $packageName -ErrorAction SilentlyContinue)) {
+      Write-Host "Installing $packageName via winget..."
+      winget install --id $packageId -e --accept-source-agreements --accept-package-agreements
+      if ($LASTEXITCODE -eq 0) {
+         Write-Host "✅ $packageName installed successfully."
+      }
+      else {
+         Write-Host "❌ Failed to install $packageName via winget."
+         exit 1
+      }
    }
    else {
-      Write-Host "Chocolatey is already installed."
+      Write-Host "$packageName is already installed."
    }
 }
 
@@ -66,7 +79,7 @@ function Generate-SSHKey {
 
    if (Test-Path $publicKey) {
       Write-Host "`n✅ Public key ready at: $publicKey"
-      Write-Host "Copy this key to GitHub (`$publicKeyPath):`n"
+      Write-Host "Copy this key to GitHub if using manual method:`n"
       Get-Content $publicKey
    }
    else {
@@ -75,6 +88,34 @@ function Generate-SSHKey {
    }
 
    return $publicKey
+}
+
+function Prompt-SSHKeyAddition {
+   param ([string]$publicKeyPath)
+
+   Write-Host "`nYour SSH public key is located at: $publicKeyPath"
+   Write-Host "Choose how to add it to GitHub:"
+   Write-Host "1) Add manually (copy-paste)"
+   Write-Host "2) Use GitHub CLI (gh)"
+
+   do {
+      $choice = Read-Host "Enter 1 or 2"
+   } while ($choice -ne '1' -and $choice -ne '2')
+
+   if ($choice -eq '1') {
+      Write-Host "`nPlease add the key manually to GitHub (Settings → SSH and GPG Keys)."
+      Write-Host "Press Enter when done..."
+      Read-Host
+   }
+   elseif ($choice -eq '2') {
+      if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+         Write-Host "GitHub CLI not installed. Installing..."
+         choco install gh -y
+      }
+      gh auth login
+      gh ssh-key add $publicKeyPath -t "bootstrap key"
+      Write-Host "✅ SSH key added to GitHub using CLI."
+   }
 }
 
 function Clone-Repository {
@@ -146,6 +187,9 @@ Write-Host "Skipping sudo installation (unsupported Windows version)."
 # SSH key
 $githubEmail = Read-Host "Enter your GitHub email (used for SSH key comment)"
 $publicKeyPath = Generate-SSHKey -githubEmail $githubEmail
+
+# Prompt user to add key before cloning
+Prompt-SSHKeyAddition -publicKeyPath $publicKeyPath
 
 # Clone repository
 $repoUrl = "git@github.com:mastrauckas/configurations.git"
