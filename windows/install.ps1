@@ -108,7 +108,10 @@ function Generate-SSHKey {
 
    if (-not (Test-Path $publicKey)) {
       Write-Host "Generating new SSH key..."
-      & ssh-keygen -t ed25519 -C $githubEmail -f $privateKey -N ""
+
+      # Use Start-Process to avoid PowerShell quoting issues
+      Start-Process -FilePath "ssh-keygen" -ArgumentList "-t", "ed25519", "-C", $githubEmail, "-f", $privateKey, "-N", "" -NoNewWindow -Wait
+
       if (Test-Path $publicKey) {
          Write-Host "✅ SSH key generated successfully:"
          Write-Host "   Private: $privateKey"
