@@ -92,14 +92,16 @@ function Handle-SSHKey {
    $choice = $null
    while ($choice -notin @("1", "2")) {
       Write-Host "`nChoose how to add your SSH public key to GitHub:"
-      Write-Host "1) Add it yourself manually"
+      Write-Host "1) Add it yourself manually (copied to clipboard)"
       Write-Host "2) Use GitHub CLI"
       $choice = Read-Host "Enter 1 or 2"
    }
 
    if ($choice -eq "1") {
-      Write-Host "`nCopy this public key and add it to GitHub:"
-      Write-Host "`n" + (Get-Content $publicKey | Out-String) + "`n"
+      # Copy to clipboard
+      Get-Content $publicKey | Set-Clipboard
+      Write-Host "`n✅ The public key has been copied to your clipboard."
+      Write-Host "Paste it into GitHub (Settings → SSH and GPG keys → New SSH key)."
       Read-Host "Press Enter once you have added the key to GitHub"
    }
    elseif ($choice -eq "2") {
