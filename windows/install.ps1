@@ -107,25 +107,20 @@ function Generate-SSHKey {
    $publicKey = "$privateKey.pub"
 
    if (-not (Test-Path $publicKey)) {
-      Write-Host "Generating new SSH key..."
+      Write-Host ""
+      Write-Host "SSH key not found. Generating now..."
+      Write-Host "You will need to press Enter to accept defaults and leave passphrase empty."
 
-      # Use Start-Process to avoid PowerShell quoting issues
-      Start-Process -FilePath "ssh-keygen" -ArgumentList "-t", "ed25519", "-C", $githubEmail, "-f", $privateKey, "-N", "" -NoNewWindow -Wait
+      # Run ssh-keygen interactively
+      & ssh-keygen -t ed25519 -C $githubEmail -f $privateKey
 
-      if (Test-Path $publicKey) {
-         Write-Host "✅ SSH key generated successfully:"
-         Write-Host "   Private: $privateKey"
-         Write-Host "   Public : $publicKey"
-      }
-      else {
+      if (-not (Test-Path $publicKey)) {
          Write-Error "❌ SSH key generation failed — public key not found at $publicKey"
          exit 1
       }
    }
-   else {
-      Write-Host "SSH key already exists at $publicKey"
-   }
 
+   Write-Host "✅ SSH key ready at: $publicKey"
    return $publicKey
 }
 
