@@ -93,19 +93,39 @@ function Install-Sudo {
 
 function Generate-SSHKey {
    param (
-      [string]$sshKeyPath,
       [string]$githubEmail
    )
 
-   if (-not (Test-Path "$sshKeyPath.pub")) {
+   $sshDir = "$HOME\.ssh"
+   if (-not (Test-Path $sshDir)) {
+      Write-Host "Creating SSH directory at $sshDir..."
+      New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
+   }
+
+   $keyName = "github_mastrauckas"
+   $privateKey = Join-Path $sshDir $keyName
+   $publicKey = "$privateKey.pub"
+
+   if (-not (Test-Path $publicKey)) {
       Write-Host "Generating new SSH key..."
-      ssh-keygen -t ed25519 -C $githubEmail -f $sshKeyPath -N ''
-      Write-Host "SSH key generated successfully at $sshKeyPath"
+      & ssh-keygen -t ed25519 -C $githubEmail -f $privateKey -N ""
+      if (Test-Path $publicKey) {
+         Write-Host "✅ SSH key generated successfully:"
+         Write-Host "   Private: $privateKey"
+         Write-Host "   Public : $publicKey"
+      }
+      else {
+         Write-Error "❌ SSH key generation failed — public key not found at $publicKey"
+         exit 1
+      }
    }
    else {
-      Write-Host "SSH key already exists at $sshKeyPath"
+      Write-Host "SSH key already exists at $publicKey"
    }
+
+   return $publicKey
 }
+
 
 function Add-Key-ToProfile {
    param (
