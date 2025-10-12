@@ -99,7 +99,7 @@ function Generate-SSHKey {
 
    if (-not (Test-Path "$sshKeyPath.pub")) {
       Write-Host "Generating new SSH key..."
-      ssh-keygen -t ed25519 -C $githubEmail -f $sshKeyPath -N ""
+      ssh-keygen -t ed25519 -C $githubEmail -f $sshKeyPath -N ''
       Write-Host "SSH key generated successfully at $sshKeyPath"
    }
    else {
