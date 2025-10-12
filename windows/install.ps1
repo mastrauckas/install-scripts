@@ -168,33 +168,41 @@ function Set-EnvironmentVariables {
    Write-Host "CONFIGURATION_REPOSITORY_PATH = $configRepoPath"
 }
 
-function Ensure-PowerShellProfileImportsConfig {
+function Ensure-PowerShell7ProfileImportsConfig {
    param([string]$configRepoPath)
 
-   # Ensure the profile file exists
-   if (-not (Test-Path $profile)) {
-      Write-Host "PowerShell profile not found. Creating profile at $profile..."
-      New-Item -Path $profile -ItemType File -Force | Out-Null
+   # Get the profile for PowerShell 7 (pwsh)
+   $pwshProfile = [System.IO.Path]::Combine(
+      $env:USERPROFILE,
+      'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+   )
+
+   # Ensure the profile directory exists
+   $profileDir = Split-Path -Parent $pwshProfile
+   if (-not (Test-Path $profileDir)) {
+      New-Item -ItemType Directory -Path $profileDir | Out-Null
    }
 
-   # Construct the import line
+   # Create the profile file if it doesn't exist
+   if (-not (Test-Path $pwshProfile)) {
+      New-Item -ItemType File -Path $pwshProfile | Out-Null
+      Write-Host "PowerShell 7 profile created at $pwshProfile"
+   }
+
+   # Line to import the config
    $importLine = "Import-Module `"$configRepoPath\powershell\main_script.ps1`""
 
-   # Read existing profile content
-   $profileContent = Get-Content $profile -Raw
-
-   # Check if the import line is already present
-   if ($profileContent -notmatch [regex]::Escape($importLine)) {
-      Write-Host "Adding import line to the top of PowerShell profile..."
-      # Prepend the import line to the existing content
-      $newContent = "$importLine`n$profileContent"
-      Set-Content -Path $profile -Value $newContent
+   # Only add if not already present
+   $existing = Get-Content $pwshProfile -ErrorAction SilentlyContinue
+   if ($existing -notcontains $importLine) {
+      # Insert at the top
+      Set-Content -Path $pwshProfile -Value @($importLine) + $existing
+      Write-Host "Import line added to PowerShell 7 profile."
    }
    else {
-      Write-Host "Import line already exists in PowerShell profile. No changes made."
+      Write-Host "Import line already exists in PowerShell 7 profile. No changes made."
    }
 }
-
 
 # --- Main workflow ---
 function Main {
