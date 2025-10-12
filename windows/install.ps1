@@ -205,11 +205,15 @@ function Main {
    $repoUrl = "git@github.com:mastrauckas/configurations.git"
    Clone-ConfigRepo -repoUrl $repoUrl -destination $ConfigRepoPath
 
+   Write-Debug "Line 1"
    # Set environment variables
    Set-EnvironmentVariables -projectsPath $ProjectsPath -configRepoPath $ConfigRepoPath
+   Write-Debug "Line 2"
 
    # Update PowerShell profile
    Update-PowerShellProfile -configRepoPath $ConfigRepoPath
+
+   Write-Debug "Line 3"
 
    Write-Host "`n✅ Setup completed successfully!"
 }
