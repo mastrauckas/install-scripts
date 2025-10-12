@@ -1,9 +1,6 @@
 # --- Windows-Compatible Environment Installer Script ---
 # Works in both Windows PowerShell 5.1 and PowerShell 7+
 # Run `iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"`
-
-
-# --- Stop script on error ---
 $ErrorActionPreference = "Stop"
 
 # --- Functions ---
@@ -67,7 +64,7 @@ function Enable-NativeSudo {
 }
 
 function Handle-SSHKey {
-   param([string]$sshKeyName, [string]$githubEmail)
+   param([string]$sshKeyName)
 
    $sshDir = Join-Path $env:USERPROFILE ".ssh"
    if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir | Out-Null }
@@ -76,6 +73,7 @@ function Handle-SSHKey {
    $publicKey = "$privateKey.pub"
 
    if (-not (Test-Path $privateKey)) {
+      $githubEmail = Read-Host "Enter your GitHub email (used for SSH key comment)"
       Write-Host "`nGenerating new SSH key..."
       ssh-keygen -t ed25519 -C $githubEmail -f $privateKey -q
       if (-not (Test-Path $publicKey)) {
@@ -98,7 +96,6 @@ function Handle-SSHKey {
    }
 
    if ($choice -eq "1") {
-      # Copy to clipboard
       Get-Content $publicKey | Set-Clipboard
       Write-Host "`n✅ The public key has been copied to your clipboard."
       Write-Host "Paste it into GitHub (Settings → SSH and GPG keys → New SSH key)."
@@ -157,10 +154,7 @@ function Main {
    $ProjectsPath = Read-Host "Enter the PROJECTS_PATH (default: C:\Projects)"
    if ([string]::IsNullOrWhiteSpace($ProjectsPath)) { $ProjectsPath = "C:\Projects" }
 
-   if (-not (Test-Path $ProjectsPath)) {
-      Write-Host "Creating projects directory: $ProjectsPath"
-      New-Item -ItemType Directory -Path $ProjectsPath | Out-Null
-   }
+   if (-not (Test-Path $ProjectsPath)) { New-Item -ItemType Directory -Path $ProjectsPath | Out-Null }
 
    $ConfigRepoPathDefault = Join-Path $ProjectsPath "configurations"
    $ConfigRepoPath = Read-Host "Enter the CONFIGURATION_REPOSITORY_PATH (default: $ConfigRepoPathDefault)"
@@ -173,8 +167,7 @@ function Main {
    Enable-NativeSudo
 
    # SSH key
-   $githubEmail = Read-Host "Enter your GitHub email (used for SSH key comment)"
-   Handle-SSHKey -sshKeyName "github_mastrauckas" -githubEmail $githubEmail
+   Handle-SSHKey -sshKeyName "github_mastrauckas"
 
    # Clone repository
    $repoUrl = "git@github.com:mastrauckas/configurations.git"
