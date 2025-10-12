@@ -168,17 +168,33 @@ function Set-EnvironmentVariables {
    Write-Host "CONFIGURATION_REPOSITORY_PATH = $configRepoPath"
 }
 
-function Update-PowerShellProfile {
+function Ensure-PowerShellProfileImportsConfig {
    param([string]$configRepoPath)
+
+   # Ensure the profile file exists
+   if (-not (Test-Path $profile)) {
+      Write-Host "PowerShell profile not found. Creating profile at $profile..."
+      New-Item -Path $profile -ItemType File -Force | Out-Null
+   }
+
+   # Construct the import line
    $importLine = "Import-Module `"$configRepoPath\powershell\main_script.ps1`""
-   if (-not (Select-String -Path $profile -Pattern [regex]::Escape($importLine) -Quiet)) {
-      Write-Host "Updating PowerShell profile to import main_script.ps1..."
-      Add-Content -Path $profile -Value "`n$importLine"
+
+   # Read existing profile content
+   $profileContent = Get-Content $profile -Raw
+
+   # Check if the import line is already present
+   if ($profileContent -notmatch [regex]::Escape($importLine)) {
+      Write-Host "Adding import line to the top of PowerShell profile..."
+      # Prepend the import line to the existing content
+      $newContent = "$importLine`n$profileContent"
+      Set-Content -Path $profile -Value $newContent
    }
    else {
-      Write-Host "Import line already exists in PowerShell profile."
+      Write-Host "Import line already exists in PowerShell profile. No changes made."
    }
 }
+
 
 # --- Main workflow ---
 function Main {
