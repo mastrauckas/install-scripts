@@ -171,8 +171,8 @@ function Set-EnvironmentVariables {
 function Ensure-Pwsh7ProfileImport {
    param([string]$importLine)
 
-   # PowerShell 7 profile path (all hosts for current user)
-   $pwsh7Profile = $PROFILE.CurrentUserAllHosts
+   # Explicit PowerShell 7 profile path
+   $pwsh7Profile = Join-Path $env:USERPROFILE "Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
 
    # Create the profile if it doesn't exist
    if (-not (Test-Path $pwsh7Profile)) {
