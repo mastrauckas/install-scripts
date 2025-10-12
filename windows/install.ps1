@@ -86,6 +86,9 @@ function Handle-SSHKey {
       Write-Host "SSH key already exists at $privateKey. Skipping generation."
    }
 
+   # Ensure SSH config exists and is correct
+   Ensure-SSHConfig -privateKey $privateKey
+
    # Ask user how to add key
    $choice = $null
    while ($choice -notin @("1", "2")) {
@@ -108,6 +111,35 @@ function Handle-SSHKey {
       Write-Host "Key added via GitHub CLI."
    }
 }
+
+function Ensure-SSHConfig {
+   param([string]$privateKey)
+
+   $sshDir = Join-Path $env:USERPROFILE ".ssh"
+   $configFile = Join-Path $sshDir "config"
+
+   if (-not (Test-Path $configFile)) {
+      Write-Host "SSH config file not found. Creating new one..."
+      New-Item -Path $configFile -ItemType File | Out-Null
+   }
+
+   # Check if an entry for github.com already exists
+   $existing = Get-Content $configFile | Select-String "Host github.com"
+   if (-not $existing) {
+      Write-Host "Adding GitHub entry to SSH config..."
+      @"
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile $privateKey
+"@ | Add-Content $configFile
+      Write-Host "SSH config updated: $configFile"
+   }
+   else {
+      Write-Host "GitHub entry already exists in SSH config. Skipping."
+   }
+}
+
 
 function Clone-ConfigRepo {
    param([string]$repoUrl, [string]$destination)
