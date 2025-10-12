@@ -96,33 +96,38 @@ function Generate-SSHKey {
       [string]$githubEmail
    )
 
-   $sshDir = "$HOME\.ssh"
-   if (-not (Test-Path $sshDir)) {
-      Write-Host "Creating SSH directory at $sshDir..."
-      New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
-   }
-
-   $keyName = "github_mastrauckas"
-   $privateKey = Join-Path $sshDir $keyName
+   $sshDir = "$env:USERPROFILE\.ssh"
+   $privateKey = Join-Path $sshDir "github_mastrauckas"
    $publicKey = "$privateKey.pub"
 
-   if (-not (Test-Path $publicKey)) {
-      Write-Host ""
-      Write-Host "SSH key not found. Generating now..."
-      Write-Host "You’ll be prompted for file location and passphrase (press Enter for defaults)."
-      Write-Host ""
+   # Ensure .ssh folder exists
+   if (-not (Test-Path $sshDir)) {
+      New-Item -ItemType Directory -Path $sshDir | Out-Null
+   }
 
-      # Run directly in the same session — fully interactive
+   if (-not (Test-Path $publicKey)) {
+      Write-Host "`nNo SSH key found. Generating one now..."
+      Write-Host "You’ll be prompted — just press Enter to accept defaults.`n"
+
+      # Run ssh-keygen interactively (no Start-Process, no clearing)
       ssh-keygen -t ed25519 -C $githubEmail -f $privateKey
+
+      Write-Host "`nSSH key generated successfully!"
    }
    else {
-      Write-Host "SSH key already exists at $publicKey"
+      Write-Host "`nSSH key already exists at $privateKey"
    }
 
-   Write-Host ""
-   Write-Host "✅ SSH key ready at: $publicKey"
-   return $publicKey
+   # Display the public key
+   if (Test-Path $publicKey) {
+      Write-Host "`nHere’s your public key (copy this to GitHub):`n"
+      Get-Content $publicKey
+   }
+   else {
+      Write-Host "Error: Could not find public key at $publicKey"
+   }
 }
+
 
 
 function Add-Key-ToProfile {
