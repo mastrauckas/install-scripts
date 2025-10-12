@@ -109,17 +109,17 @@ function Generate-SSHKey {
    if (-not (Test-Path $publicKey)) {
       Write-Host ""
       Write-Host "SSH key not found. Generating now..."
-      Write-Host "You will need to press Enter to accept defaults and leave passphrase empty."
+      Write-Host "You’ll be prompted for file location and passphrase (press Enter for defaults)."
+      Write-Host ""
 
-      # Run ssh-keygen interactively
-      & ssh-keygen -t ed25519 -C $githubEmail -f $privateKey
-
-      if (-not (Test-Path $publicKey)) {
-         Write-Error "❌ SSH key generation failed — public key not found at $publicKey"
-         exit 1
-      }
+      # Run directly in the same session — fully interactive
+      ssh-keygen -t ed25519 -C $githubEmail -f $privateKey
+   }
+   else {
+      Write-Host "SSH key already exists at $publicKey"
    }
 
+   Write-Host ""
    Write-Host "✅ SSH key ready at: $publicKey"
    return $publicKey
 }
