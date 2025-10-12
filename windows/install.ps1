@@ -2,56 +2,34 @@
 # Works in both Windows PowerShell 5.1 and PowerShell 7+
 # Run `iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"`
 
-$ErrorActionPreference = "Stop"
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# -------------------------------
+# Windows Bootstrap Script (Modular)
+# -------------------------------
 
-# --- Step 1: Functions ---
+function Prompt-Paths {
+   $defaultProjectsPath = "C:\Projects"
+   $projectsPath = Read-Host "Enter the PROJECTS_PATH (default: $defaultProjectsPath)"
+   if ([string]::IsNullOrWhiteSpace($projectsPath)) { $projectsPath = $defaultProjectsPath }
 
-function Show-Menu {
-   param (
-      [string]$Title = 'Choose how to add SSH key to GitHub'
-   )
+   $defaultConfigPath = Join-Path $projectsPath "configurations"
+   $configPath = Read-Host "Enter the CONFIGURATION_REPOSITORY_PATH (default: $defaultConfigPath)"
+   if ([string]::IsNullOrWhiteSpace($configPath)) { $configPath = $defaultConfigPath }
 
-   $options = @(
-      "1. I will add the SSH key manually",
-      "2. Use GitHub CLI to upload the SSH key automatically"
-   )
-
-   $selected = 0
-   $key = $null
-
-   while ($true) {
-      Clear-Host
-      Write-Host "=== $Title ===`n"
-      for ($i = 0; $i -lt $options.Length; $i++) {
-         if ($i -eq $selected) {
-            Write-Host "> $($options[$i])" -ForegroundColor Cyan
-         }
-         else {
-            Write-Host "  $($options[$i])"
-         }
-      }
-
-      $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-      switch ($key.VirtualKeyCode) {
-         38 { if ($selected -gt 0) { $selected-- } }   # Up arrow
-         40 { if ($selected -lt $options.Length - 1) { $selected++ } }  # Down arrow
-         13 { break }  # Enter
-      }
-
-      if ($key.VirtualKeyCode -eq 13) { break }
+   # Ensure projects directory exists
+   if (-not (Test-Path $projectsPath)) {
+      Write-Host "Creating projects directory at $projectsPath..."
+      New-Item -ItemType Directory -Force -Path $projectsPath | Out-Null
    }
 
-   return $selected
+   return @{ ProjectsPath = $projectsPath; ConfigPath = $configPath }
 }
 
 function Install-Chocolatey {
    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
       Write-Host "Installing Chocolatey..."
       Set-ExecutionPolicy Bypass -Scope Process -Force
-      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-      Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-      Write-Host "Chocolatey installed successfully."
+      [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+      iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
    }
    else {
       Write-Host "Chocolatey is already installed."
@@ -60,198 +38,123 @@ function Install-Chocolatey {
 
 function Install-Git {
    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-      Write-Host "Installing Git via Chocolatey..."
+      Write-Host "Installing Git..."
       choco install git -y
-      Write-Host "Git installed successfully."
    }
    else {
       Write-Host "Git is already installed."
    }
 }
 
-function Install-Sudo {
-   try {
-      $winVer = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ReleaseId
-   }
-   catch {
-      $winVer = 0
-   }
-   if ([int]$winVer -ge 22000) {
-      if (-not (Get-Command sudo -ErrorAction SilentlyContinue)) {
-         Write-Host "Windows version supports sudo. Installing..."
-         choco install sudo -y
-         Write-Host "sudo installed successfully."
-      }
-      else {
-         Write-Host "sudo is already installed."
-      }
-   }
-   else {
-      Write-Host "Skipping sudo installation (unsupported Windows version)."
-   }
-}
-
 function Generate-SSHKey {
-   param (
-      [string]$githubEmail
-   )
-
+   param ([string]$githubEmail)
    $sshDir = "$env:USERPROFILE\.ssh"
-   $privateKey = Join-Path $sshDir "github_mastrauckas"
+   if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Force -Path $sshDir | Out-Null }
+
+   $keyName = "github_mastrauckas"
+   $privateKey = Join-Path $sshDir $keyName
    $publicKey = "$privateKey.pub"
 
-   # Ensure .ssh folder exists
-   if (-not (Test-Path $sshDir)) {
-      New-Item -ItemType Directory -Path $sshDir | Out-Null
-   }
-
    if (-not (Test-Path $publicKey)) {
-      Write-Host "`nNo SSH key found. Generating one now..."
-      Write-Host "You’ll be prompted — just press Enter to accept defaults.`n"
-
-      # Run ssh-keygen interactively (no Start-Process, no clearing)
+      Write-Host "`nSSH key not found. Generating now..."
+      Write-Host "You’ll be prompted for file location and passphrase (press Enter for defaults).`n"
       ssh-keygen -t ed25519 -C $githubEmail -f $privateKey
-
-      Write-Host "`nSSH key generated successfully!"
    }
    else {
-      Write-Host "`nSSH key already exists at $privateKey"
+      Write-Host "SSH key already exists at $privateKey"
    }
 
-   # Display the public key
    if (Test-Path $publicKey) {
-      Write-Host "`nHere’s your public key (copy this to GitHub):`n"
+      Write-Host "`n✅ Public key ready at: $publicKey"
+      Write-Host "Copy this key to GitHub (`$publicKeyPath):`n"
       Get-Content $publicKey
    }
    else {
-      Write-Host "Error: Could not find public key at $publicKey"
+      Write-Host "❌ Error: Public key not found at $publicKey"
+      exit 1
+   }
+
+   return $publicKey
+}
+
+function Clone-Repository {
+   param (
+      [string]$repoUrl,
+      [string]$destinationPath
+   )
+
+   if (Test-Path $destinationPath) {
+      Write-Host "Repository already exists at $destinationPath. Skipping clone."
+      return
+   }
+
+   Write-Host "`nCloning repository into $destinationPath..."
+   try { ssh -o StrictHostKeyChecking=no -T git@github.com 2>$null } catch { }
+
+   git clone $repoUrl $destinationPath
+   if ($LASTEXITCODE -eq 0) {
+      Write-Host "✅ Repository cloned successfully."
+   }
+   else {
+      Write-Host "❌ Failed to clone repository. Check SSH key and access rights."
+      exit 1
    }
 }
 
-
-
-function Add-Key-ToProfile {
+function Set-EnvironmentVariables {
    param (
-      [string]$configRepoPath
+      [string]$projectsPath,
+      [string]$configPath
    )
 
-   Write-Host "Updating PowerShell profile to import main_script.ps1..."
-   $profileContent = @()
-   if (Test-Path $profile) {
-      $profileContent = Get-Content $profile -ErrorAction SilentlyContinue
-   }
+   Write-Host "`nSetting environment variables..."
+   [Environment]::SetEnvironmentVariable("PROJECTS_PATH", $projectsPath, [System.EnvironmentVariableTarget]::User)
+   [Environment]::SetEnvironmentVariable("CONFIGURATION_REPOSITORY_PATH", $configPath, [System.EnvironmentVariableTarget]::User)
+   Write-Host "PROJECTS_PATH = $projectsPath"
+   Write-Host "CONFIGURATION_REPOSITORY_PATH = $configPath"
+}
 
-   $importLine = "Import-Module `"$configRepoPath\powershell\main_script.ps1`""
-   if ($profileContent -notcontains $importLine) {
-      $newContent = @()
-      $newContent += $importLine
-      if ($profileContent.Count -gt 0) {
-         $newContent += ""
-         $newContent += $profileContent
-      }
-      $newContent | Set-Content -Path $profile -Encoding UTF8
-      Write-Host "Added import line to PowerShell profile at top."
+function Update-PowerShellProfile {
+   param ([string]$configPath)
+   $profileLine = "Import-Module '$configPath\powershell\main_script.ps1'"
+   if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Force -Path $PROFILE | Out-Null }
+   $profileContent = Get-Content $PROFILE -Raw
+   if (-not $profileContent.Contains($profileLine)) {
+      Write-Host "`nUpdating PowerShell profile to import main_script.ps1..."
+      $newContent = $profileLine + "`r`n" + $profileContent
+      Set-Content -Path $PROFILE -Value $newContent
    }
    else {
       Write-Host "Import line already exists in PowerShell profile."
    }
 }
 
-# --- Step 2: Prompt for project and config paths ---
+# -------------------------------
+# Main Script
+# -------------------------------
 
-$ProjectsPath = Read-Host "Enter the PROJECTS_PATH (e.g., C:\Projects)"
+# Prompt for paths
+$paths = Prompt-Paths
+$ProjectsPath = $paths.ProjectsPath
+$ConfigRepoPath = $paths.ConfigPath
 
-if ([string]::IsNullOrWhiteSpace($ProjectsPath)) {
-   Write-Host "Error: PROJECTS_PATH cannot be empty. Exiting script." -ForegroundColor Red
-   exit 1
-}
-
-if (-not (Test-Path $ProjectsPath)) {
-   Write-Host "Creating directory $ProjectsPath..."
-   New-Item -ItemType Directory -Path $ProjectsPath | Out-Null
-}
-
-$defaultConfigRepoPath = Join-Path $ProjectsPath "configurations"
-$ConfigRepoPathInput = Read-Host "Enter the CONFIGURATION_REPOSITORY_PATH (default: $defaultConfigRepoPath)"
-$ConfigRepoPath = if ([string]::IsNullOrWhiteSpace($ConfigRepoPathInput)) {
-   $defaultConfigRepoPath
-}
-else {
-   $ConfigRepoPathInput
-}
-
-if (-not (Test-Path $ConfigRepoPath)) {
-   Write-Host "Creating directory $ConfigRepoPath..."
-   New-Item -ItemType Directory -Path $ConfigRepoPath | Out-Null
-}
-
-# --- Step 3: Install PowerShell, Chocolatey, Git, sudo ---
-
-Write-Host "`nInstalling required components..."
+# Install required components
 Install-Chocolatey
 Install-Git
-Install-Sudo
+Write-Host "Skipping sudo installation (unsupported Windows version)."
 
-# --- Step 4: SSH key setup ---
+# SSH key
+$githubEmail = Read-Host "Enter your GitHub email (used for SSH key comment)"
+$publicKeyPath = Generate-SSHKey -githubEmail $githubEmail
 
-$sshFolder = "$env:USERPROFILE\.ssh"
-if (-not (Test-Path $sshFolder)) {
-   New-Item -ItemType Directory -Path $sshFolder | Out-Null
-}
+# Clone repository
+$repoUrl = "git@github.com:mastrauckas/configurations.git"
+Clone-Repository -repoUrl $repoUrl -destinationPath $ConfigRepoPath
 
-$sshKeyPath = Join-Path $sshFolder "github_mastrauckas"
+# Set environment variables
+Set-EnvironmentVariables -projectsPath $ProjectsPath -configPath $ConfigRepoPath
 
-if (-not (Test-Path "$sshKeyPath.pub")) {
-   $githubEmail = Read-Host "Enter your GitHub email (used for SSH key comment)"
-   Generate-SSHKey -sshKeyPath $sshKeyPath -githubEmail $githubEmail
+# Update PowerShell profile
+Update-PowerShellProfile -configPath $ConfigRepoPath
 
-   $publicKey = Get-Content "$sshKeyPath.pub"
-   Write-Host "`nYour SSH public key (copy to GitHub):`n"
-   Write-Host $publicKey -ForegroundColor Cyan
-   Write-Host "`nVisit https://github.com/settings/keys to add this key manually.`n"
-
-   $choice = Show-Menu
-   if ($choice -eq 1) {
-      if (Get-Command gh -ErrorAction SilentlyContinue) {
-         Write-Host "Adding key using GitHub CLI..."
-         gh ssh-key add "$sshKeyPath.pub" --title "github_mastrauckas"
-         Write-Host "Key added via GitHub CLI."
-      }
-      else {
-         Write-Host "GitHub CLI not found. Please install GitHub CLI and rerun script if you want automatic setup."
-      }
-   }
-   else {
-      Read-Host "Press ENTER after you've added the key on GitHub"
-   }
-}
-else {
-   Write-Host "SSH key already exists. Skipping generation."
-}
-
-# --- Step 5: Clone the configuration repository ---
-
-Write-Host "`nCloning repository into $ConfigRepoPath..."
-try {
-   git clone git@github.com:mastrauckas/configurations.git $ConfigRepoPath
-   Write-Host "Repository cloned successfully."
-}
-catch {
-   Write-Host "Failed to clone repository. Exiting script." -ForegroundColor Red
-   exit 1
-}
-
-# --- Step 6: Set environment variables after successful clone ---
-
-Write-Host "`nSetting environment variables..."
-[Environment]::SetEnvironmentVariable("PROJECTS_PATH", $ProjectsPath, [EnvironmentVariableTarget]::User)
-[Environment]::SetEnvironmentVariable("CONFIGURATION_REPOSITORY_PATH", $ConfigRepoPath, [EnvironmentVariableTarget]::User)
-Write-Host "PROJECTS_PATH = $ProjectsPath"
-Write-Host "CONFIGURATION_REPOSITORY_PATH = $ConfigRepoPath"
-Write-Host "Environment variables saved (user-level, persistent)."
-
-# --- Step 7: Update PowerShell profile ---
-
-Add-Key-ToProfile -configRepoPath $ConfigRepoPath
-
-Write-Host "`nSetup completed successfully!" -ForegroundColor Green
+Write-Host "`n🎉 Setup completed successfully!"
