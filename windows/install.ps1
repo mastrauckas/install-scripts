@@ -181,7 +181,14 @@ function Update-Pwsh7Profile {
    }
 
    # Define the import line to add
-   $importLine = "Import-Module `"$configRepoPath\powershell\main_script.ps1`""
+   $importLine = @'
+try {
+    . "$env:CONFIGURATION_REPOSITORY_PATH\powershell\main_script.ps1"
+}
+catch {
+    Write-Host "Error importing module: $_"
+}
+'@
 
    if (-not ($existing -contains $importLine)) {
       # Ensure new line if file already has content
