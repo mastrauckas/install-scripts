@@ -41,6 +41,28 @@ function Install-ChocoPackage {
    }
 }
 
+function Install-Git {
+   if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+      Write-Host "Installing Git via winget..."
+      winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements
+      Write-Host "Git installed successfully."
+   }
+   else {
+      Write-Host "Git is already installed."
+   }
+}
+
+function Install-VSCodeInsiders {
+   if (-not (Get-Command code-insiders -ErrorAction SilentlyContinue)) {
+      Write-Host "Installing VS Code Insiders via winget..."
+      winget install --id Microsoft.VisualStudioCode.Insiders -e --source winget --accept-package-agreements --accept-source-agreements
+      Write-Host "VS Code Insiders installed successfully."
+   }
+   else {
+      Write-Host "VS Code Insiders is already installed."
+   }
+}
+
 function Enable-NativeSudo {
    $winVersion = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
    $major = [int]$winVersion.CurrentMajorVersionNumber
@@ -60,6 +82,34 @@ function Enable-NativeSudo {
    }
    else {
       Write-Host "Windows version does not support native sudo. Skipping."
+   }
+}
+
+function Ensure-SSHConfig {
+   param([string]$privateKey)
+
+   $sshDir = Join-Path $env:USERPROFILE ".ssh"
+   $configFile = Join-Path $sshDir "config"
+
+   if (-not (Test-Path $configFile)) {
+      Write-Host "SSH config file not found. Creating new one..."
+      New-Item -Path $configFile -ItemType File | Out-Null
+   }
+
+   # Check if an entry for github.com already exists
+   $existing = Get-Content $configFile | Select-String "Host github.com"
+   if (-not $existing) {
+      Write-Host "Adding GitHub entry to SSH config..."
+@"
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile $privateKey
+"@ | Add-Content $configFile
+      Write-Host "SSH config updated: $configFile"
+   }
+   else {
+      Write-Host "GitHub entry already exists in SSH config. Skipping."
    }
 }
 
@@ -86,10 +136,8 @@ function Handle-SSHKey {
       Write-Host "SSH key already exists at $privateKey. Skipping generation."
    }
 
-   # Ensure SSH config exists and is correct
    Ensure-SSHConfig -privateKey $privateKey
 
-   # Ask user how to add key
    $choice = $null
    while ($choice -notin @("1", "2")) {
       Write-Host "`nChoose how to add your SSH public key to GitHub:"
@@ -111,35 +159,6 @@ function Handle-SSHKey {
       Write-Host "Key added via GitHub CLI."
    }
 }
-
-function Ensure-SSHConfig {
-   param([string]$privateKey)
-
-   $sshDir = Join-Path $env:USERPROFILE ".ssh"
-   $configFile = Join-Path $sshDir "config"
-
-   if (-not (Test-Path $configFile)) {
-      Write-Host "SSH config file not found. Creating new one..."
-      New-Item -Path $configFile -ItemType File | Out-Null
-   }
-
-   # Check if an entry for github.com already exists
-   $existing = Get-Content $configFile | Select-String "Host github.com"
-   if (-not $existing) {
-      Write-Host "Adding GitHub entry to SSH config..."
-      @"
-Host github.com
-    HostName github.com
-    User git
-    IdentityFile $privateKey
-"@ | Add-Content $configFile
-      Write-Host "SSH config updated: $configFile"
-   }
-   else {
-      Write-Host "GitHub entry already exists in SSH config. Skipping."
-   }
-}
-
 
 function Clone-ConfigRepo {
    param([string]$repoUrl, [string]$destination)
@@ -171,16 +190,13 @@ function Set-EnvironmentVariables {
 function Update-Pwsh7Profile {
    param([string]$configRepoPath)
 
-   # Define the path to the PowerShell 7 profile
    $pwsh7Profile = Join-Path $env:USERPROFILE "Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
 
-   # Create the profile if it does not exist
    if (-not (Test-Path $pwsh7Profile)) {
       Write-Host "PowerShell 7 profile not found. Creating profile at $pwsh7Profile..."
       New-Item -ItemType File -Path $pwsh7Profile -Force | Out-Null
    }
 
-   # Define the import line to add
    $importLine = @'
 try {
     . "$env:CONFIGURATION_REPOSITORY_PATH\powershell\main_script.ps1"
@@ -190,15 +206,14 @@ catch {
 }
 '@
 
+   $existing = Get-Content $pwsh7Profile
    if (-not ($existing -contains $importLine)) {
-      # Ensure new line if file already has content
       if ($existing.Count -gt 0) {
          Add-Content -Path $pwsh7Profile -Value "`n$importLine"
       }
       else {
          Add-Content -Path $pwsh7Profile -Value $importLine
       }
-      Write-Host "Adding import line to PowerShell 7 profile..."
       Write-Host "Import line added successfully."
    }
    else {
@@ -206,11 +221,8 @@ catch {
    }
 }
 
-
-
 # --- Main workflow ---
 function Main {
-   # Prompt for paths
    $ProjectsPath = Read-Host "Enter the PROJECTS_PATH (default: C:\Projects)"
    if ([string]::IsNullOrWhiteSpace($ProjectsPath)) { $ProjectsPath = "C:\Projects" }
 
@@ -220,27 +232,22 @@ function Main {
    $ConfigRepoPath = Read-Host "Enter the CONFIGURATION_REPOSITORY_PATH (default: $ConfigRepoPathDefault)"
    if ([string]::IsNullOrWhiteSpace($ConfigRepoPath)) { $ConfigRepoPath = $ConfigRepoPathDefault }
 
-   # Install components
    Install-PowerShell
    Install-Chocolatey
-   Install-ChocoPackage -packageName "git"
+   Install-Git
+   Install-VSCodeInsiders
    Enable-NativeSudo
 
-   # SSH key
    Handle-SSHKey -sshKeyName "github_mastrauckas"
 
-   # Clone repository
    $repoUrl = "git@github.com:mastrauckas/configurations.git"
    Clone-ConfigRepo -repoUrl $repoUrl -destination $ConfigRepoPath
 
    Write-Debug "Line 1"
-   # Set environment variables
    Set-EnvironmentVariables -projectsPath $ProjectsPath -configRepoPath $ConfigRepoPath
    Write-Debug "Line 2"
 
-   # Update PowerShell profile
    Update-Pwsh7Profile -configRepoPath $ConfigRepoPath
-
    Write-Debug "Line 3"
 
    Write-Host "`n✅ Setup completed successfully!"
