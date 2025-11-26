@@ -52,6 +52,69 @@ function Install-Git {
    }
 }
 
+# ==========================================================
+# >>> Added Function: Configure-Git
+# ==========================================================
+function Set-GitConfig {
+    $answer = Read-Host "Do you want to apply the recommended Git configuration? (y/n)"
+    if ($answer -notin @("y","Y")) {
+        Write-Host "Skipping Git configuration."
+        return
+    }
+
+    $gitName = Read-Host "Enter your Git user.name"
+    $gitEmail = Read-Host "Enter your Git user.email"
+
+    if ([string]::IsNullOrWhiteSpace($gitName) -or [string]::IsNullOrWhiteSpace($gitEmail)) {
+        Write-Host "Git name/email cannot be empty. Skipping Git configuration."
+        return
+    }
+
+    Write-Host "Applying Git configuration..."
+
+    git config --global user.name "$gitName"
+    git config --global user.email "$gitEmail"
+
+    git config --global core.autocrlf input
+    git config --global core.fscache true
+    git config --global core.untrackedCache true
+    git config --global core.preloadIndex true
+    git config --system core.longpaths true
+    git config --global credential.helper manager
+    git config --global merge.ff only
+    git config --global pull.ff only
+    git config --global color.ui auto
+    git config --global advice.detachedHead false
+    git config --global fetch.prune true
+    git config --global push.default simple
+
+    git config --global alias.st "status -sb"
+    git config --global alias.co checkout
+    git config --global alias.br branch
+    git config --global alias.last "log -1 HEAD"
+    git config --global alias.lg "log --oneline --decorate --graph --all"
+
+    $globalGitIgnore = "$HOME\.gitignore_global"
+
+@"
+.vscode/
+.vs/
+bin/
+obj/
+node_modules/
+*.user
+*.suo
+*.swp
+*.tmp
+Thumbs.db
+"@ | Out-File -Encoding utf8 $globalGitIgnore
+
+    git config --global core.excludesfile "$globalGitIgnore"
+
+    Write-Host "`nGit configuration applied successfully." -ForegroundColor Green
+    git config --global --list
+}
+
 function Install-VSCodeInsiders {
    if (-not (Get-Command code-insiders -ErrorAction SilentlyContinue)) {
       Write-Host "Installing VS Code Insiders via winget..."
@@ -85,7 +148,7 @@ function Enable-NativeSudo {
    }
 }
 
-function Ensure-SSHConfig {
+function Set-SSHConfig {
    param([string]$privateKey)
 
    $sshDir = Join-Path $env:USERPROFILE ".ssh"
@@ -96,7 +159,6 @@ function Ensure-SSHConfig {
       New-Item -Path $configFile -ItemType File | Out-Null
    }
 
-   # Check if an entry for github.com already exists
    $existing = Get-Content $configFile | Select-String "Host github.com"
    if (-not $existing) {
       Write-Host "Adding GitHub entry to SSH config..."
@@ -113,7 +175,7 @@ Host github.com
    }
 }
 
-function Handle-SSHKey {
+function Set-SSHKey {
    param([string]$sshKeyName)
 
    $sshDir = Join-Path $env:USERPROFILE ".ssh"
@@ -136,7 +198,7 @@ function Handle-SSHKey {
       Write-Host "SSH key already exists at $privateKey. Skipping generation."
    }
 
-   Ensure-SSHConfig -privateKey $privateKey
+   Set-SSHConfig -privateKey $privateKey
 
    $choice = $null
    while ($choice -notin @("1", "2")) {
@@ -160,7 +222,7 @@ function Handle-SSHKey {
    }
 }
 
-function Clone-ConfigRepo {
+function Initialize-ConfigRepository {
    param([string]$repoUrl, [string]$destination)
    if (-not (Test-Path $destination)) {
       Write-Host "Cloning repository into $destination..."
@@ -235,13 +297,19 @@ function Main {
    Install-PowerShell
    Install-Chocolatey
    Install-Git
+
+   # ==========================================================
+   # >>> Call added Configure-Git function
+   # ==========================================================
+   Set-GitConfig
+
    Install-VSCodeInsiders
    Enable-NativeSudo
 
-   Handle-SSHKey -sshKeyName "github_mastrauckas"
+   Set-SSHKey -sshKeyName "github_mastrauckas"
 
    $repoUrl = "git@github.com:mastrauckas/configurations.git"
-   Clone-ConfigRepo -repoUrl $repoUrl -destination $ConfigRepoPath
+   Initialize-ConfigRepository -repoUrl $repoUrl -destination $ConfigRepoPath
 
    Write-Debug "Line 1"
    Set-EnvironmentVariables -projectsPath $ProjectsPath -configRepoPath $ConfigRepoPath
