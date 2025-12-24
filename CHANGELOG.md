@@ -7,11 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2025-12-23
-
-### Added
-
 - **Time/Date Configuration** - Automated configuration of Windows time and date settings
+
   - Calendar set to Gregorian
   - First day of week set to Sunday
   - Short date format: MM/dd/yyyy (e.g., 04/05/2017)
@@ -23,12 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Check-and-apply pattern (only modifies values if they differ from target)
 
 - **Development Tools Installation**
+
   - PowerShell 7+ installation via winget
   - Chocolatey package manager installation
   - Git installation via winget
   - VS Code Insiders installation via winget
 
 - **Git Configuration**
+
   - User name and email setup with validation
   - Core settings optimization (autocrlf, fscache, untrackedCache, preloadIndex, longpaths)
   - Credential helper configuration (Windows Credential Manager)
@@ -37,14 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Global .gitignore file creation
 
 - **SSH Key Management**
+
   - ed25519 SSH key generation
   - SSH config file creation and GitHub entry configuration
   - GitHub integration via manual clipboard copy or GitHub CLI
 
 - **Windows Features**
+
   - Native sudo enablement (Windows 11 build 22631+)
 
 - **Environment Setup**
+
   - User environment variables configuration (PROJECTS_PATH, CONFIGURATION_REPOSITORY_PATH)
   - PowerShell 7 profile updates for custom module loading
   - Configuration repository cloning via SSH
@@ -61,6 +63,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Registry-based configuration using PowerShell providers
 - Error handling with try-catch blocks and descriptive messages
 - User-scoped registry changes (HKCU) for personalization settings
-
-[unreleased]: https://github.com/mastrauckas/install-scripts/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/mastrauckas/install-scripts/releases/tag/v1.0.0
