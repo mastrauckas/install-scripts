@@ -2,6 +2,7 @@
 # Works in both Windows PowerShell 5.1 and PowerShell 7+
 # Run `iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"`
 $ErrorActionPreference = "Stop"
+$ScriptVersion = "0.1.0"
 
 # --- Functions ---
 
@@ -148,6 +149,178 @@ function Enable-NativeSudo {
    }
 }
 
+# ==========================================================
+# >>> Time/Date Configuration Functions
+# ==========================================================
+
+function Get-WindowsVersionInfo {
+   # Retrieves Windows version information for OS-specific features
+   $winVersion = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+   return @{
+      Major = [int]$winVersion.CurrentMajorVersionNumber
+      Build = [int]$winVersion.CurrentBuildNumber
+      IsWin11_22H2OrLater = ([int]$winVersion.CurrentBuildNumber -ge 22621)
+      IsWin11 = ([int]$winVersion.CurrentBuildNumber -ge 22000)
+      IsWin10 = ([int]$winVersion.CurrentMajorVersionNumber -eq 10)
+   }
+}
+
+function Set-InternationalSettings {
+   # Configure calendar type, first day of week, and date/time formats
+   Write-Host "`nConfiguring international settings..."
+
+   $path = "HKCU:\Control Panel\International"
+
+   # Define target settings
+   $settings = @{
+      iCalendarType = "1"              # 1=Gregorian Calendar
+      iFirstDayOfWeek = "6"            # 6=Sunday, 0=Monday
+      sShortDate = "MM/dd/yyyy"        # Short date format (e.g., 04/05/2017)
+      sLongDate = "dddd, MMMM d, yyyy" # Long date format (e.g., Wednesday, April 5, 2017)
+      sShortTime = "h:mm tt"           # Short time format (e.g., 9:40 AM)
+   }
+
+   try {
+      foreach ($key in $settings.Keys) {
+         $targetValue = $settings[$key]
+         $currentValue = (Get-ItemProperty -Path $path -Name $key -ErrorAction SilentlyContinue).$key
+
+         if ($currentValue -ne $targetValue) {
+            Set-ItemProperty -Path $path -Name $key -Value $targetValue -Type String -Force
+            Write-Host "  Set $key to '$targetValue'"
+         }
+         else {
+            Write-Host "  $key already set to '$targetValue' (skipped)"
+         }
+      }
+      Write-Host "  International settings applied." -ForegroundColor Green
+   }
+   catch {
+      Write-Host "  Failed to apply international settings: $_" -ForegroundColor Red
+   }
+}
+
+function Enable-TrayClockSeconds {
+   # Enable "show seconds in system tray clock" (Windows 11 22H2+ only)
+   param([hashtable]$versionInfo)
+
+   Write-Host "`nConfiguring system tray clock..."
+
+   if ($versionInfo.IsWin11_22H2OrLater) {
+      $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+      $keyName = "ShowSecondsInSystemClock"
+      $targetValue = 1
+
+      try {
+         $currentValue = (Get-ItemProperty -Path $path -Name $keyName -ErrorAction SilentlyContinue).$keyName
+
+         if ($currentValue -ne $targetValue) {
+            Set-ItemProperty -Path $path -Name $keyName -Value $targetValue -Type DWord -Force
+            Write-Host "  Enabled 'Show seconds in system tray clock'"
+         }
+         else {
+            Write-Host "  'Show seconds in system tray clock' already enabled (skipped)"
+         }
+         Write-Host "  System tray clock configured." -ForegroundColor Green
+      }
+      catch {
+         Write-Host "  Failed to enable tray clock seconds: $_" -ForegroundColor Red
+      }
+   }
+   else {
+      Write-Host "  Show seconds in tray clock requires Windows 11 22H2+ (build 22621+). Skipping." -ForegroundColor Yellow
+   }
+}
+
+function Set-SystemTimeZone {
+   # Set system timezone to Eastern Time
+   Write-Host "`nConfiguring system timezone..."
+
+   $targetTimeZone = "Eastern Standard Time"
+
+   try {
+      $currentTimeZone = (Get-TimeZone).Id
+
+      if ($currentTimeZone -ne $targetTimeZone) {
+         Set-TimeZone -Id $targetTimeZone
+         Write-Host "  Set system timezone to '$targetTimeZone'"
+      }
+      else {
+         Write-Host "  System timezone already set to '$targetTimeZone' (skipped)"
+      }
+      Write-Host "  System timezone configured." -ForegroundColor Green
+   }
+   catch {
+      Write-Host "  Failed to set system timezone: $_" -ForegroundColor Red
+   }
+}
+
+function Add-AdditionalClockUTC {
+   # Add UTC as additional clock in taskbar
+   Write-Host "`nConfiguring additional clock (UTC)..."
+
+   # Correct registry path for additional clocks
+   $path = "HKCU:\Control Panel\TimeDate\AdditionalClocks\1"
+
+   try {
+      # Ensure the registry path exists
+      if (-not (Test-Path $path)) {
+         New-Item -Path $path -Force | Out-Null
+      }
+
+      # Enable additional clock 1
+      $currentEnabled = (Get-ItemProperty -Path $path -Name "Enable" -ErrorAction SilentlyContinue).Enable
+      if ($currentEnabled -ne 1) {
+         Set-ItemProperty -Path $path -Name "Enable" -Value 1 -Type DWord -Force
+         Write-Host "  Enabled additional clock 1"
+      }
+      else {
+         Write-Host "  Additional clock 1 already enabled (skipped)"
+      }
+
+      # Set clock display name
+      $currentName = (Get-ItemProperty -Path $path -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+      if ($currentName -ne "UTC") {
+         Set-ItemProperty -Path $path -Name "DisplayName" -Value "UTC" -Type String -Force
+         Write-Host "  Set additional clock display name to 'UTC'"
+      }
+      else {
+         Write-Host "  Additional clock display name already set to 'UTC' (skipped)"
+      }
+
+      # Set timezone to UTC
+      $currentTZ = (Get-ItemProperty -Path $path -Name "TzRegKeyName" -ErrorAction SilentlyContinue).TzRegKeyName
+      if ($currentTZ -ne "UTC") {
+         Set-ItemProperty -Path $path -Name "TzRegKeyName" -Value "UTC" -Type String -Force
+         Write-Host "  Set additional clock timezone to UTC"
+      }
+      else {
+         Write-Host "  Additional clock timezone already set to UTC (skipped)"
+      }
+
+      Write-Host "  Additional clock configured." -ForegroundColor Green
+   }
+   catch {
+      Write-Host "  Failed to configure additional clock: $_" -ForegroundColor Red
+   }
+}
+
+function Set-TimeDateSettings {
+   # Main orchestrator for time/date configuration
+   Write-Host "`nConfiguring time and date settings..." -ForegroundColor Cyan
+
+   $versionInfo = Get-WindowsVersionInfo
+   Write-Host "Detected Windows Version: $($versionInfo.Major) Build $($versionInfo.Build)"
+
+   Set-SystemTimeZone
+   Set-InternationalSettings
+   Enable-TrayClockSeconds -versionInfo $versionInfo
+   Add-AdditionalClockUTC
+
+   Write-Host "`nTime/date settings applied successfully!" -ForegroundColor Green
+   Write-Host "Note: Some changes may require logging out and back in to take effect." -ForegroundColor Yellow
+}
+
 function Set-SSHConfig {
    param([string]$privateKey)
 
@@ -285,6 +458,9 @@ catch {
 
 # --- Main workflow ---
 function Main {
+   Write-Host "`nWindows Environment Setup Script v$ScriptVersion" -ForegroundColor Cyan
+   Write-Host "===============================================`n" -ForegroundColor Cyan
+
    $ProjectsPath = Read-Host "Enter the PROJECTS_PATH (default: C:\Projects)"
    if ([string]::IsNullOrWhiteSpace($ProjectsPath)) { $ProjectsPath = "C:\Projects" }
 
@@ -305,6 +481,7 @@ function Main {
 
    Install-VSCodeInsiders
    Enable-NativeSudo
+   Set-TimeDateSettings
 
    Set-SSHKey -sshKeyName "github_mastrauckas"
 
