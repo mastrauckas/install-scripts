@@ -2,6 +2,7 @@
 # Works in both Windows PowerShell 5.1 and PowerShell 7+
 # Run `iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"`
 $ErrorActionPreference = "Stop"
+$ScriptVersion = "0.1.0"
 
 # --- Functions ---
 
@@ -457,6 +458,9 @@ catch {
 
 # --- Main workflow ---
 function Main {
+   Write-Host "`nWindows Environment Setup Script v$ScriptVersion" -ForegroundColor Cyan
+   Write-Host "===============================================`n" -ForegroundColor Cyan
+
    $ProjectsPath = Read-Host "Enter the PROJECTS_PATH (default: C:\Projects)"
    if ([string]::IsNullOrWhiteSpace($ProjectsPath)) { $ProjectsPath = "C:\Projects" }
 

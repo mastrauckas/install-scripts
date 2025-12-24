@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-12-23
+
+### Added
+
 - **Time/Date Configuration** - Automated configuration of Windows time and date settings
 
   - System timezone set to Eastern Standard Time
@@ -64,3 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Registry-based configuration using PowerShell providers
 - Error handling with try-catch blocks and descriptive messages
 - User-scoped registry changes (HKCU) for personalization settings
+
+[unreleased]: https://github.com/mastrauckas/install-scripts/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mastrauckas/install-scripts/releases/tag/v0.1.0
