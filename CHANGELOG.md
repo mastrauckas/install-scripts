@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-12-24
+
+### Fixed
+
+- **PATH Refresh Issue** - Fixed issue where Git and other tools installed via winget were not immediately available in the current PowerShell session ([#5](https://github.com/mastrauckas/install-scripts/issues/5))
+  - After installing tools via winget, the current session's PATH environment variable was not updated
+  - This caused subsequent Git commands (git config, git clone) to fail with "git is not recognized"
+  - Script now refreshes the session environment after each installation, making tools immediately available
+
+### Added
+
+- **Environment Refresh Functions** - New PowerShell functions to refresh session environment variables from registry
+  - `Update-SessionEnvironment` - Refreshes all environment variables from Machine and User registry scopes
+  - `Get-EnvironmentVariableNames` - Retrieves environment variable names for a given scope
+  - `Get-EnvironmentVariableValue` - Retrieves environment variable values from registry
+  - Combines and deduplicates PATH entries from both Machine and User scopes
+  - Preserves session-critical variables (PSModulePath, USERNAME, PROCESSOR_ARCHITECTURE)
+  - Safe to call multiple times (idempotent)
+
 ## [0.1.1] - 2025-12-23
 
 ### Fixed
@@ -75,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error handling with try-catch blocks and descriptive messages
 - User-scoped registry changes (HKCU) for personalization settings
 
-[unreleased]: https://github.com/mastrauckas/install-scripts/compare/v0.1.1...HEAD
+[unreleased]: https://github.com/mastrauckas/install-scripts/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/mastrauckas/install-scripts/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mastrauckas/install-scripts/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mastrauckas/install-scripts/releases/tag/v0.1.0

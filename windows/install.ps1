@@ -2,9 +2,128 @@
 # Works in both Windows PowerShell 5.1 and PowerShell 7+
 # Run `iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"`
 $ErrorActionPreference = "Stop"
-$ScriptVersion = "0.1.1"
+$ScriptVersion = "0.1.2"
 
 # --- Functions ---
+
+function Get-EnvironmentVariableNames {
+   <#
+   .SYNOPSIS
+   Retrieves all environment variable names for a given scope.
+
+   .PARAMETER Scope
+   The scope to retrieve variables from (Process, Machine, or User).
+   #>
+   param(
+      [Parameter(Mandatory = $true)]
+      [ValidateSet('Process', 'Machine', 'User')]
+      [string]$Scope
+   )
+
+   $target = switch ($Scope) {
+      'Process' { [EnvironmentVariableTarget]::Process }
+      'Machine' { [EnvironmentVariableTarget]::Machine }
+      'User'    { [EnvironmentVariableTarget]::User }
+   }
+
+   return [Environment]::GetEnvironmentVariables($target).Keys
+}
+
+function Get-EnvironmentVariableValue {
+   <#
+   .SYNOPSIS
+   Retrieves the value of a specific environment variable from a given scope.
+
+   .PARAMETER Name
+   The name of the environment variable.
+
+   .PARAMETER Scope
+   The scope to retrieve the variable from (Process, Machine, or User).
+   #>
+   param(
+      [Parameter(Mandatory = $true)]
+      [string]$Name,
+
+      [Parameter(Mandatory = $true)]
+      [ValidateSet('Process', 'Machine', 'User')]
+      [string]$Scope
+   )
+
+   $target = switch ($Scope) {
+      'Process' { [EnvironmentVariableTarget]::Process }
+      'Machine' { [EnvironmentVariableTarget]::Machine }
+      'User'    { [EnvironmentVariableTarget]::User }
+   }
+
+   return [Environment]::GetEnvironmentVariable($Name, $target)
+}
+
+function Update-SessionEnvironment {
+   <#
+   .SYNOPSIS
+   Refreshes environment variables from the registry to the current PowerShell session.
+
+   .DESCRIPTION
+   After installing tools via winget or other installers that modify the system PATH,
+   this function refreshes the current session's environment variables without requiring
+   a new PowerShell session. It reads from both Machine and User registry scopes,
+   combines PATH entries, and preserves session-critical variables.
+
+   .EXAMPLE
+   Install-Git
+   Update-SessionEnvironment
+   git --version  # Now works in current session
+   #>
+
+   Write-Host "Refreshing environment variables from registry..."
+
+   # Preserve session-critical variables
+   $userName = $env:USERNAME
+   $architecture = $env:PROCESSOR_ARCHITECTURE
+   $psModulePath = $env:PSModulePath
+
+   # Determine scopes to refresh (skip User scope for SYSTEM account)
+   $scopeList = 'Process', 'Machine'
+   if ($env:USERNAME -notin 'SYSTEM', "${env:COMPUTERNAME}`$") {
+      $scopeList += 'User'
+   }
+
+   # Refresh all environment variables from registry
+   foreach ($scope in $scopeList) {
+      Get-EnvironmentVariableNames -Scope $scope | ForEach-Object {
+         $name = $_
+         $value = Get-EnvironmentVariableValue -Name $name -Scope $scope
+         Set-Item "Env:$name" -Value $value -ErrorAction SilentlyContinue
+      }
+   }
+
+   # Special PATH handling: combine Machine and User PATH, deduplicate
+   $machinePath = Get-EnvironmentVariableValue -Name 'PATH' -Scope 'Machine'
+   $userPath = Get-EnvironmentVariableValue -Name 'PATH' -Scope 'User'
+
+   $pathEntries = @()
+   if ($machinePath) { $pathEntries += $machinePath -split ';' }
+   if ($userPath) { $pathEntries += $userPath -split ';' }
+
+   # Remove duplicates while preserving order
+   $uniquePaths = @()
+   $seen = @{}
+   foreach ($entry in $pathEntries) {
+      if ($entry -and -not $seen.ContainsKey($entry.ToLower())) {
+         $uniquePaths += $entry
+         $seen[$entry.ToLower()] = $true
+      }
+   }
+
+   $env:PATH = $uniquePaths -join ';'
+
+   # Restore preserved session-critical variables
+   if ($psModulePath) { $env:PSModulePath = $psModulePath }
+   if ($userName) { $env:USERNAME = $userName }
+   if ($architecture) { $env:PROCESSOR_ARCHITECTURE = $architecture }
+
+   Write-Host "Environment variables refreshed successfully." -ForegroundColor Green
+}
 
 function Install-PowerShell {
    if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
@@ -471,8 +590,13 @@ function Main {
    if ([string]::IsNullOrWhiteSpace($ConfigRepoPath)) { $ConfigRepoPath = $ConfigRepoPathDefault }
 
    Install-PowerShell
+   Update-SessionEnvironment
+
    Install-Chocolatey
+   Update-SessionEnvironment
+
    Install-Git
+   Update-SessionEnvironment
 
    # ==========================================================
    # >>> Call added Configure-Git function
@@ -480,6 +604,8 @@ function Main {
    Set-GitConfig
 
    Install-VSCodeInsiders
+   Update-SessionEnvironment
+
    Enable-NativeSudo
    Set-TimeDateSettings
 
