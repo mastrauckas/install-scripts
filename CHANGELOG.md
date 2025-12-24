@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Time/Date Configuration** - Automated configuration of Windows time and date settings
 
+  - System timezone set to Eastern Standard Time
   - Calendar set to Gregorian
   - First day of week set to Sunday
   - Short date format: MM/dd/yyyy (e.g., 04/05/2017)

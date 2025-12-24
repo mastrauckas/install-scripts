@@ -231,37 +231,66 @@ function Enable-TrayClockSeconds {
    }
 }
 
+function Set-SystemTimeZone {
+   # Set system timezone to Eastern Time
+   Write-Host "`nConfiguring system timezone..."
+
+   $targetTimeZone = "Eastern Standard Time"
+
+   try {
+      $currentTimeZone = (Get-TimeZone).Id
+
+      if ($currentTimeZone -ne $targetTimeZone) {
+         Set-TimeZone -Id $targetTimeZone
+         Write-Host "  Set system timezone to '$targetTimeZone'"
+      }
+      else {
+         Write-Host "  System timezone already set to '$targetTimeZone' (skipped)"
+      }
+      Write-Host "  System timezone configured." -ForegroundColor Green
+   }
+   catch {
+      Write-Host "  Failed to set system timezone: $_" -ForegroundColor Red
+   }
+}
+
 function Add-AdditionalClockUTC {
    # Add UTC as additional clock in taskbar
    Write-Host "`nConfiguring additional clock (UTC)..."
 
-   $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+   # Correct registry path for additional clocks
+   $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\TimeDate"
 
    try {
-      # Enable additional clock
-      $currentEnabled = (Get-ItemProperty -Path $path -Name "AdditionalClock1" -ErrorAction SilentlyContinue).AdditionalClock1
+      # Ensure the registry path exists
+      if (-not (Test-Path $path)) {
+         New-Item -Path $path -Force | Out-Null
+      }
+
+      # Enable additional clock 1
+      $currentEnabled = (Get-ItemProperty -Path $path -Name "AdditionalClock_Show1" -ErrorAction SilentlyContinue).AdditionalClock_Show1
       if ($currentEnabled -ne 1) {
-         Set-ItemProperty -Path $path -Name "AdditionalClock1" -Value 1 -Type DWord -Force
-         Write-Host "  Enabled additional clock"
+         Set-ItemProperty -Path $path -Name "AdditionalClock_Show1" -Value 1 -Type DWord -Force
+         Write-Host "  Enabled additional clock 1"
       }
       else {
-         Write-Host "  Additional clock already enabled (skipped)"
+         Write-Host "  Additional clock 1 already enabled (skipped)"
       }
 
       # Set clock display name
-      $currentName = (Get-ItemProperty -Path $path -Name "AdditionalClock1_Name" -ErrorAction SilentlyContinue).AdditionalClock1_Name
+      $currentName = (Get-ItemProperty -Path $path -Name "AdditionalClockDisplayName1" -ErrorAction SilentlyContinue).AdditionalClockDisplayName1
       if ($currentName -ne "UTC") {
-         Set-ItemProperty -Path $path -Name "AdditionalClock1_Name" -Value "UTC" -Type String -Force
-         Write-Host "  Set additional clock name to 'UTC'"
+         Set-ItemProperty -Path $path -Name "AdditionalClockDisplayName1" -Value "UTC" -Type String -Force
+         Write-Host "  Set additional clock display name to 'UTC'"
       }
       else {
-         Write-Host "  Additional clock name already set to 'UTC' (skipped)"
+         Write-Host "  Additional clock display name already set to 'UTC' (skipped)"
       }
 
       # Set timezone to UTC
-      $currentTZ = (Get-ItemProperty -Path $path -Name "AdditionalClock1_TZName" -ErrorAction SilentlyContinue).AdditionalClock1_TZName
+      $currentTZ = (Get-ItemProperty -Path $path -Name "AdditionalClockTimeZone1" -ErrorAction SilentlyContinue).AdditionalClockTimeZone1
       if ($currentTZ -ne "UTC") {
-         Set-ItemProperty -Path $path -Name "AdditionalClock1_TZName" -Value "UTC" -Type String -Force
+         Set-ItemProperty -Path $path -Name "AdditionalClockTimeZone1" -Value "UTC" -Type String -Force
          Write-Host "  Set additional clock timezone to UTC"
       }
       else {
@@ -288,6 +317,7 @@ function Set-TimeDateSettings {
    $versionInfo = Get-WindowsVersionInfo
    Write-Host "Detected Windows Version: $($versionInfo.Major) Build $($versionInfo.Build)"
 
+   Set-SystemTimeZone
    Set-InternationalSettings
    Enable-TrayClockSeconds -versionInfo $versionInfo
    Add-AdditionalClockUTC
