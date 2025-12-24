@@ -148,6 +148,154 @@ function Enable-NativeSudo {
    }
 }
 
+# ==========================================================
+# >>> Time/Date Configuration Functions
+# ==========================================================
+
+function Get-WindowsVersionInfo {
+   # Retrieves Windows version information for OS-specific features
+   $winVersion = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+   return @{
+      Major = [int]$winVersion.CurrentMajorVersionNumber
+      Build = [int]$winVersion.CurrentBuildNumber
+      IsWin11_22H2OrLater = ([int]$winVersion.CurrentBuildNumber -ge 22621)
+      IsWin11 = ([int]$winVersion.CurrentBuildNumber -ge 22000)
+      IsWin10 = ([int]$winVersion.CurrentMajorVersionNumber -eq 10)
+   }
+}
+
+function Set-InternationalSettings {
+   # Configure calendar type, first day of week, and date/time formats
+   Write-Host "`nConfiguring international settings..."
+
+   $path = "HKCU:\Control Panel\International"
+
+   # Define target settings
+   $settings = @{
+      iCalendarType = "1"              # 1=Gregorian Calendar
+      iFirstDayOfWeek = "6"            # 6=Sunday, 0=Monday
+      sShortDate = "MM/dd/yyyy"        # Short date format (e.g., 04/05/2017)
+      sLongDate = "dddd, MMMM d, yyyy" # Long date format (e.g., Wednesday, April 5, 2017)
+      sShortTime = "h:mm tt"           # Short time format (e.g., 9:40 AM)
+   }
+
+   try {
+      foreach ($key in $settings.Keys) {
+         $targetValue = $settings[$key]
+         $currentValue = (Get-ItemProperty -Path $path -Name $key -ErrorAction SilentlyContinue).$key
+
+         if ($currentValue -ne $targetValue) {
+            Set-ItemProperty -Path $path -Name $key -Value $targetValue -Type String -Force
+            Write-Host "  Set $key to '$targetValue'"
+         }
+         else {
+            Write-Host "  $key already set to '$targetValue' (skipped)"
+         }
+      }
+      Write-Host "  International settings applied." -ForegroundColor Green
+   }
+   catch {
+      Write-Host "  Failed to apply international settings: $_" -ForegroundColor Red
+   }
+}
+
+function Enable-TrayClockSeconds {
+   # Enable "show seconds in system tray clock" (Windows 11 22H2+ only)
+   param([hashtable]$versionInfo)
+
+   Write-Host "`nConfiguring system tray clock..."
+
+   if ($versionInfo.IsWin11_22H2OrLater) {
+      $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+      $keyName = "ShowSecondsInSystemClock"
+      $targetValue = 1
+
+      try {
+         $currentValue = (Get-ItemProperty -Path $path -Name $keyName -ErrorAction SilentlyContinue).$keyName
+
+         if ($currentValue -ne $targetValue) {
+            Set-ItemProperty -Path $path -Name $keyName -Value $targetValue -Type DWord -Force
+            Write-Host "  Enabled 'Show seconds in system tray clock'"
+         }
+         else {
+            Write-Host "  'Show seconds in system tray clock' already enabled (skipped)"
+         }
+         Write-Host "  System tray clock configured." -ForegroundColor Green
+      }
+      catch {
+         Write-Host "  Failed to enable tray clock seconds: $_" -ForegroundColor Red
+      }
+   }
+   else {
+      Write-Host "  Show seconds in tray clock requires Windows 11 22H2+ (build 22621+). Skipping." -ForegroundColor Yellow
+   }
+}
+
+function Add-AdditionalClockUTC {
+   # Add UTC as additional clock in taskbar
+   Write-Host "`nConfiguring additional clock (UTC)..."
+
+   $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+
+   try {
+      # Enable additional clock
+      $currentEnabled = (Get-ItemProperty -Path $path -Name "AdditionalClock1" -ErrorAction SilentlyContinue).AdditionalClock1
+      if ($currentEnabled -ne 1) {
+         Set-ItemProperty -Path $path -Name "AdditionalClock1" -Value 1 -Type DWord -Force
+         Write-Host "  Enabled additional clock"
+      }
+      else {
+         Write-Host "  Additional clock already enabled (skipped)"
+      }
+
+      # Set clock display name
+      $currentName = (Get-ItemProperty -Path $path -Name "AdditionalClock1_Name" -ErrorAction SilentlyContinue).AdditionalClock1_Name
+      if ($currentName -ne "UTC") {
+         Set-ItemProperty -Path $path -Name "AdditionalClock1_Name" -Value "UTC" -Type String -Force
+         Write-Host "  Set additional clock name to 'UTC'"
+      }
+      else {
+         Write-Host "  Additional clock name already set to 'UTC' (skipped)"
+      }
+
+      # Set timezone to UTC
+      $currentTZ = (Get-ItemProperty -Path $path -Name "AdditionalClock1_TZName" -ErrorAction SilentlyContinue).AdditionalClock1_TZName
+      if ($currentTZ -ne "UTC") {
+         Set-ItemProperty -Path $path -Name "AdditionalClock1_TZName" -Value "UTC" -Type String -Force
+         Write-Host "  Set additional clock timezone to UTC"
+      }
+      else {
+         Write-Host "  Additional clock timezone already set to UTC (skipped)"
+      }
+
+      Write-Host "  Additional clock configured." -ForegroundColor Green
+   }
+   catch {
+      Write-Host "  Failed to configure additional clock: $_" -ForegroundColor Red
+   }
+}
+
+function Set-TimeDateSettings {
+   # Main orchestrator for time/date configuration
+   $answer = Read-Host "Do you want to configure time/date settings? (y/n)"
+   if ($answer -notin @("y","Y")) {
+      Write-Host "Skipping time/date configuration."
+      return
+   }
+
+   Write-Host "`nConfiguring time and date settings..." -ForegroundColor Cyan
+
+   $versionInfo = Get-WindowsVersionInfo
+   Write-Host "Detected Windows Version: $($versionInfo.Major) Build $($versionInfo.Build)"
+
+   Set-InternationalSettings
+   Enable-TrayClockSeconds -versionInfo $versionInfo
+   Add-AdditionalClockUTC
+
+   Write-Host "`nTime/date settings applied successfully!" -ForegroundColor Green
+   Write-Host "Note: Some changes may require logging out and back in to take effect." -ForegroundColor Yellow
+}
+
 function Set-SSHConfig {
    param([string]$privateKey)
 
@@ -305,6 +453,7 @@ function Main {
 
    Install-VSCodeInsiders
    Enable-NativeSudo
+   Set-TimeDateSettings
 
    Set-SSHKey -sshKeyName "github_mastrauckas"
 
