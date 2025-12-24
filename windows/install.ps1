@@ -2,7 +2,7 @@
 # Works in both Windows PowerShell 5.1 and PowerShell 7+
 # Run `iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"`
 $ErrorActionPreference = "Stop"
-$ScriptVersion = "0.1.0"
+$ScriptVersion = "0.1.1"
 
 # --- Functions ---
 
@@ -177,7 +177,7 @@ function Set-InternationalSettings {
       iFirstDayOfWeek = "6"            # 6=Sunday, 0=Monday
       sShortDate = "MM/dd/yyyy"        # Short date format (e.g., 04/05/2017)
       sLongDate = "dddd, MMMM d, yyyy" # Long date format (e.g., Wednesday, April 5, 2017)
-      sShortTime = "h:mm tt"           # Short time format (e.g., 9:40 AM)
+      sShortTime = "hh:mm tt"          # Short time format (e.g., 09:40 AM)
    }
 
    try {
