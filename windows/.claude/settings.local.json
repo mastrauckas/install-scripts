@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd system timezone configuration and enhance additional clock setup\n\n- Add Set-SystemTimeZone function to set system timezone to Eastern Standard Time\n- Update additional clock registry path to correct location \\(ControlPanel\\\\TimeDate\\)\n- Use proper registry key names for additional clock configuration\n- Update CHANGELOG.md to include system timezone feature\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)",
+      "Bash(git commit:*)",
+      "Bash(reg query \"HKCU\\\\Control Panel\\\\TimeDate\")",
+      "Bash(reg query \"HKCU\\\\Control Panel\\\\TimeDate\\\\AdditionalClocks\" /s)",
+      "Bash(pwsh -Command \"Get-ChildItem ''HKCU:\\\\Control Panel\\\\TimeDate'' -Recurse | Select-Object Name\")",
+      "Bash(pwsh:*)"
     ]
   }
 }
