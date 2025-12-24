@@ -306,12 +306,6 @@ function Add-AdditionalClockUTC {
 
 function Set-TimeDateSettings {
    # Main orchestrator for time/date configuration
-   $answer = Read-Host "Do you want to configure time/date settings? (y/n)"
-   if ($answer -notin @("y","Y")) {
-      Write-Host "Skipping time/date configuration."
-      return
-   }
-
    Write-Host "`nConfiguring time and date settings..." -ForegroundColor Cyan
 
    $versionInfo = Get-WindowsVersionInfo
