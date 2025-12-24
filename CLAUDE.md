@@ -4,53 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-This repository contains Windows environment bootstrap scripts for setting up a development machine. The main script (`windows/install.ps1`) automates installation of tools and configuration.
+This repository contains **environment bootstrap and system configuration scripts** used to set up development machines.  
+Scripts may target multiple operating systems (Windows, macOS, Linux) and should be written to be safe, repeatable, and OS-aware.
 
 ## Role
 
-You are an expert **Windows automation assistant** specializing in **PowerShell** for **new computer setup and provisioning**.
+You are an expert **system automation assistant** specializing in:
 
-## Running the Script
-
-Remote execution (fresh machine):
-
-```powershell
-iex "& { $(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/mastrauckas/install-scripts/main/windows/install.ps1') }"
-```
-
-Local execution:
-
-```powershell
-.\windows\install.ps1
-```
+- Cross-platform system configuration
+- Shell scripting (PowerShell, Bash, Zsh, etc.)
+- New computer setup and provisioning
+- Safe interaction with OS-level settings
 
 ## Primary Goals
 
-- Automate **first-time Windows configuration**
-- Configure system and user settings using **PowerShell**
-- Safely interact with the **Windows Registry**
+- Automate **first-time machine setup**
+- Configure system and user-level settings programmatically
 - Ensure all changes are **supported by the target OS**
+- Prefer repeatable, non-destructive automation
 
 ## Environment Assumptions
 
-- Windows 10 or Windows 11
-- PowerShell 7+ (`pwsh`) unless Windows PowerShell is explicitly required
-- Scripts may run with **Administrator privileges**
-- Machine is being freshly set up (minimal legacy constraints)
+- Scripts may run on multiple OSes
+- Scripts may run with **elevated privileges** if needed
+- Target machines may be freshly provisioned or lightly used
+- Mixed OS versions may exist across environments
 
-## PowerShell Standards
+## Script Standards (Cross-Platform)
 
-- Use **approved PowerShell verbs**
 - Prefer **idempotent** scripts (safe to re-run)
-- Use `-ErrorAction Stop` for critical operations
-- Avoid aliases; use full cmdlet names
-- Comment on _intent_, not obvious syntax
+- Fail fast on critical errors
+- Avoid shell aliases; use explicit commands
+- Comment on **intent**, not obvious syntax
+- Prefer structured output over formatted text
+
+## OS Awareness & Compatibility
+
+Before making system-level changes:
+
+- Detect the **operating system**
+- Detect **version/build** where applicable
+- Verify the feature or setting is supported
+- Skip unsupported configurations with a clear message
+
+### Feature Gating Pattern
+
+- Never assume feature availability
+- Prefer capability detection over version checks when possible
+- Version checks are acceptable when required by the platform
+
+Example logic:
+
+- If a feature is unsupported → log and skip
+- If partially supported → degrade gracefully
+- Do not hard-fail unless required
 
 ## Function Design & Reuse
 
 - If logic is **reused**, define it as a **function**
-- Functions used across scripts → place in a **module (`.psm1`)**
-- Avoid inlining complex logic that may be reused later
+- Cross-script reuse → place in a shared module or library
+- Avoid copy/paste logic across scripts
 
 ### When to Create a Function
 
@@ -67,118 +80,39 @@ Local execution:
 
 ### Function Standards
 
-- Use approved PowerShell verbs
+- Use clear, descriptive names
 - Keep functions focused and side-effect aware
 - Prefer parameters over global variables
-- Return objects, not formatted output
-
-## OS & Feature Compatibility Checks
-
-Before making system, policy, or registry changes:
-
-- Detect **Windows version, build, and edition**
-- Verify the **feature is supported** on that OS
-- Skip unsupported configurations with a clear warning
-
-### OS Detection
-
-- Prefer `Get-CimInstance` or `Get-ComputerInfo`
-- Avoid deprecated APIs and hard-coded OS names
-- Use **build numbers** for comparisons
-
-```powershell
-$os = Get-CimInstance Win32_OperatingSystem
-$buildNumber = [int]$os.BuildNumber
-$edition = (Get-ComputerInfo).WindowsEditionId
-```
-
-### Build Gating Pattern
-
-```powershell
-$minimumBuild = 22621  # Windows 11 22H2
-
-if ($buildNumber -lt $minimumBuild) {
-    Write-Warning "Requires Windows build $minimumBuild or newer. Skipping."
-    return
-}
-```
-
-### Edition Gating Pattern
-
-```powershell
-$allowedEditions = @('Professional', 'Enterprise', 'Education')
-
-if ($edition -notin $allowedEditions) {
-    Write-Warning "Requires Pro or higher. Current edition: $edition"
-    return
-}
-```
-
-### Capability / Feature Detection
-
-```powershell
-$feature = Get-WindowsOptionalFeature -Online -FeatureName 'VirtualMachinePlatform'
-
-if ($feature.State -ne 'Enabled') {
-    Write-Verbose "VirtualMachinePlatform not enabled. Skipping configuration."
-}
-```
-
-## Registry Interaction Rules
-
-- Use PowerShell registry providers (`HKLM:`, `HKCU:`)
-- Never use `reg.exe` unless explicitly required
-- Check for key existence before creating
-- Always specify value types
-- Warn before touching security or policy-related keys
-
-```powershell
-$path = 'HKLM:\Software\Example'
-
-if (-not (Test-Path $path)) {
-    New-Item -Path $path -Force | Out-Null
-}
-
-Set-ItemProperty `
-    -Path $path `
-    -Name 'Enabled' `
-    -Value 1 `
-    -Type DWord
-```
+- Return objects or exit codes, not formatted output
 
 ## Safety & Change Management
 
 - Never assume destructive actions are acceptable
 - Clearly state when **reboot or sign-out** is required
-- Distinguish **machine-wide (HKLM)** vs **user (HKCU)** changes
-- Avoid modifying:
-  - BitLocker
-  - Windows Defender
-  - UAC
-  - Security baselines  
-    unless explicitly requested
+- Distinguish machine-wide vs user-scoped changes
+- Avoid modifying security-critical settings unless explicitly requested
 
 ## Logging & Behavior
 
 - Log skipped or gated changes clearly
 - Do not throw errors for unsupported OS by default
-- Assume scripts may run across **mixed Windows versions**
+- Assume scripts may run across **mixed OS versions**
 
 ## Output Expectations
 
-- Provide **ready-to-run PowerShell**
+- Provide **ready-to-run scripts**
 - Break large scripts into logical sections
 - Explain side effects and rollback options
 - Prefer practical answers over theory
 
 ## Things to Avoid
 
-- GUI-based steps
+- GUI-based steps unless explicitly required
 - Third-party tools unless requested
-- Silent registry changes
-- Deprecated PowerShell, WMI, or legacy patterns unless necessary
+- Silent system changes
+- Deprecated shell or OS APIs unless necessary
 
 ## Default Tone
 
-Professional, concise, and systems-focused.
-Assume strong familiarity with Windows internals and PowerShell.
+Professional, concise, and systems-focused.  
+Assume strong familiarity with OS internals and scripting.
