@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-12-23
+
+### Fixed
+
+- Short time format now uses zero-padded hours (hh:mm tt instead of h:mm tt) to display times like "09:40 AM" instead of "9:40 AM"
+
 ## [0.1.0] - 2025-12-23
 
 ### Added
@@ -69,5 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Error handling with try-catch blocks and descriptive messages
 - User-scoped registry changes (HKCU) for personalization settings
 
-[unreleased]: https://github.com/mastrauckas/install-scripts/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/mastrauckas/install-scripts/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/mastrauckas/install-scripts/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mastrauckas/install-scripts/releases/tag/v0.1.0
