@@ -259,7 +259,7 @@ function Add-AdditionalClockUTC {
    Write-Host "`nConfiguring additional clock (UTC)..."
 
    # Correct registry path for additional clocks
-   $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\TimeDate"
+   $path = "HKCU:\Control Panel\TimeDate\AdditionalClocks\1"
 
    try {
       # Ensure the registry path exists
@@ -268,9 +268,9 @@ function Add-AdditionalClockUTC {
       }
 
       # Enable additional clock 1
-      $currentEnabled = (Get-ItemProperty -Path $path -Name "AdditionalClock_Show1" -ErrorAction SilentlyContinue).AdditionalClock_Show1
+      $currentEnabled = (Get-ItemProperty -Path $path -Name "Enable" -ErrorAction SilentlyContinue).Enable
       if ($currentEnabled -ne 1) {
-         Set-ItemProperty -Path $path -Name "AdditionalClock_Show1" -Value 1 -Type DWord -Force
+         Set-ItemProperty -Path $path -Name "Enable" -Value 1 -Type DWord -Force
          Write-Host "  Enabled additional clock 1"
       }
       else {
@@ -278,9 +278,9 @@ function Add-AdditionalClockUTC {
       }
 
       # Set clock display name
-      $currentName = (Get-ItemProperty -Path $path -Name "AdditionalClockDisplayName1" -ErrorAction SilentlyContinue).AdditionalClockDisplayName1
+      $currentName = (Get-ItemProperty -Path $path -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
       if ($currentName -ne "UTC") {
-         Set-ItemProperty -Path $path -Name "AdditionalClockDisplayName1" -Value "UTC" -Type String -Force
+         Set-ItemProperty -Path $path -Name "DisplayName" -Value "UTC" -Type String -Force
          Write-Host "  Set additional clock display name to 'UTC'"
       }
       else {
@@ -288,9 +288,9 @@ function Add-AdditionalClockUTC {
       }
 
       # Set timezone to UTC
-      $currentTZ = (Get-ItemProperty -Path $path -Name "AdditionalClockTimeZone1" -ErrorAction SilentlyContinue).AdditionalClockTimeZone1
+      $currentTZ = (Get-ItemProperty -Path $path -Name "TzRegKeyName" -ErrorAction SilentlyContinue).TzRegKeyName
       if ($currentTZ -ne "UTC") {
-         Set-ItemProperty -Path $path -Name "AdditionalClockTimeZone1" -Value "UTC" -Type String -Force
+         Set-ItemProperty -Path $path -Name "TzRegKeyName" -Value "UTC" -Type String -Force
          Write-Host "  Set additional clock timezone to UTC"
       }
       else {
