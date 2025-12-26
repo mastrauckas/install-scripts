@@ -117,6 +117,16 @@ Example logic:
 Professional, concise, and systems-focused.
 Assume strong familiarity with OS internals and scripting.
 
+## Commit and Documentation Standards
+
+- **No branding or attribution** - Do not include "Generated with Claude Code", "Co-Authored-By: Claude", or similar branding in:
+  - Commit messages
+  - PR descriptions
+  - Issue descriptions
+  - Release notes
+  - Code comments
+- **Keep messages professional** - Focus on what changed and why, not how it was created
+
 ## GitHub Issue Management
 
 When work requires tracking via GitHub issues, follow this workflow:
@@ -282,8 +292,6 @@ Fixes #X - Brief description of what this PR does
 ## Testing
 
 Describe how the changes were tested
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
 **Labels:**
@@ -328,6 +336,7 @@ Describe how the changes were tested
 - **Request review** - Tag reviewers if needed
 - **Respond to feedback** - Address review comments promptly
 - **Keep updated** - Sync with base branch if it changes during review
+- **No branding** - Do not include "Generated with Claude Code" or similar branding in commit messages, PR descriptions, or issue descriptions
 
 ## Tag and Release Management
 
