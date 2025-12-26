@@ -241,3 +241,90 @@ git checkout -b descriptive-name-issue-X
 - **One issue per branch** - Don't mix unrelated changes
 - **Delete after merge** - Clean up merged branches promptly
 - **Sync with main regularly** - Rebase or merge main into long-lived branches
+
+## Pull Request (PR) Management
+
+### Before Creating a PR
+
+**Always ask the user first:**
+- "Should I create a PR for this branch now?"
+- If yes, confirm target branch (usually `main`)
+
+### Creating a Pull Request
+
+When creating a PR, provide suggestions and ask for confirmation:
+
+**Title:**
+- Suggest a clear, descriptive title matching the commit message format
+- Include issue reference: "Fix #X: Description" or "Add feature (#X)"
+- Ask: "Does this PR title work, or would you like to modify it?"
+
+**Description:**
+- **Always include "Fixes #X" or "Closes #X"** to link the PR to the issue
+- Include summary of changes
+- List what was added/fixed/changed
+- Include testing information if applicable
+- Use markdown formatting with sections (## Summary, ## Changes, ## Testing)
+- Ask: "Should I include additional context in the PR description?"
+
+**Example PR description structure:**
+```markdown
+## Summary
+
+Fixes #X - Brief description of what this PR does
+
+## Changes
+
+- Added feature Y
+- Fixed issue with Z
+- Updated documentation for W
+
+## Testing
+
+Describe how the changes were tested
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+**Labels:**
+- Suggest same labels as the associated issue
+- Common PR-specific labels: `ready-for-review`, `needs-testing`, `breaking-change`
+- Ask: "Should I apply these labels: [list], or would you like different ones?"
+
+**Assignee:**
+- Default suggestion: Assign to the user (repository owner)
+- Match the issue assignee when possible
+- Ask: "Should I assign this PR to you (mastrauckas)?"
+
+**Projects:**
+- Suggest same project as the associated issue
+- Ask: "Should this PR be added to the same project as the issue?"
+
+**Milestone:**
+- Suggest same milestone as the associated issue
+- Ask: "Should this PR be assigned to the same milestone as the issue?"
+
+**Base Branch:**
+- Default: `main`
+- For hotfixes or specific releases, may target other branches
+- Ask: "Should this PR target `main`, or a different branch?"
+
+### Linking PR to Issue
+
+**Critical: Always link PRs to issues using:**
+- `Fixes #X` - For bug fixes (auto-closes issue when PR merges)
+- `Closes #X` - For features/enhancements (auto-closes issue when PR merges)
+- `Relates to #X` - For related work that doesn't close the issue
+
+**Placement:** Include in the PR description, typically in the Summary section.
+
+### PR Best Practices
+
+- **One PR per issue** - Keep scope focused and aligned with the issue
+- **Link to issue** - Always use "Fixes #X" or "Closes #X" in description
+- **Keep PRs small** - Easier to review, faster to merge
+- **Write clear descriptions** - Help reviewers understand the changes
+- **Match metadata** - Use same labels, assignee, project, milestone as the issue
+- **Request review** - Tag reviewers if needed
+- **Respond to feedback** - Address review comments promptly
+- **Keep updated** - Sync with base branch if it changes during review
