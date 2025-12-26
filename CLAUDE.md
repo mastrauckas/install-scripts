@@ -114,5 +114,80 @@ Example logic:
 
 ## Default Tone
 
-Professional, concise, and systems-focused.  
+Professional, concise, and systems-focused.
 Assume strong familiarity with OS internals and scripting.
+
+## GitHub Issue Management
+
+When work requires tracking via GitHub issues, follow this workflow:
+
+### Before Creating or Using an Issue
+
+**Always ask the user first:**
+- "Should I create a new issue for this work, or use an existing issue?"
+- If using existing: "Which issue number should I use?"
+
+### Creating a New Issue
+
+When creating a new issue, provide suggestions and ask for confirmation:
+
+**Title:**
+- Suggest a clear, concise title (5-10 words)
+- Format: Action verb + what + context (e.g., "Fix PATH refresh after tool installations")
+- Ask: "Does this title work, or would you like to modify it?"
+
+**Description:**
+- Include problem statement, proposed solution, and acceptance criteria
+- Use markdown formatting with headers (## Problem, ## Solution, ## Tasks)
+- Keep it focused and actionable
+- Ask: "Should I include additional context in the description?"
+
+**Labels:**
+- Suggest 2-4 relevant labels based on the issue type:
+  - Type: `bug`, `enhancement`, `feature`, `documentation`, `refactor`, `security`
+  - Platform: `windows`, `macos`, `linux`, `cross-platform`
+  - Component: `git-config`, `ssh-setup`, `environment-vars`, `time-date`, `tool-installation`, `profile-config`
+  - Priority: `priority: critical`, `priority: high`, `priority: medium`, `priority: low`
+- Ask: "Should I apply these labels: [list], or would you like different ones?"
+
+**Assignee:**
+- Default suggestion: Assign to the user (repository owner)
+- Ask: "Should I assign this issue to you (mastrauckas)?"
+
+**Projects:**
+- If project boards exist, suggest the most relevant project
+- Ask: "Should this issue be added to any project board?"
+
+**Milestone:**
+- If milestones exist (e.g., v0.2.0, v1.0.0), suggest the most appropriate one
+- Ask: "Should this issue be assigned to a milestone?"
+
+### Using an Existing Issue
+
+When working with an existing issue, first retrieve and display the current information:
+
+**Display:**
+```
+Issue #X: [Title]
+Status: Open/Closed
+Labels: [current labels]
+Assignee: [current assignee or "None"]
+Project: [current project or "None"]
+Milestone: [current milestone or "None"]
+```
+
+**Then ask about updates:**
+- "Should I update any of the following?"
+  - Labels (add/remove)
+  - Assignee (change/add)
+  - Project (add/change)
+  - Milestone (add/change)
+  - Title or description (if needed)
+
+### Issue Best Practices
+
+- Create issues for non-trivial features, bugs, or enhancements
+- Skip issue creation for typo fixes or minor documentation updates (unless requested)
+- Link issues to PRs using "Fixes #X" or "Closes #X" in PR description
+- Keep issue scope focused - split large issues into multiple smaller ones
+- Use issue templates when available
