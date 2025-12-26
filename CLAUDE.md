@@ -191,3 +191,53 @@ Milestone: [current milestone or "None"]
 - Link issues to PRs using "Fixes #X" or "Closes #X" in PR description
 - Keep issue scope focused - split large issues into multiple smaller ones
 - Use issue templates when available
+
+## Branch Management
+
+### Branch Naming Convention
+
+**Every branch must have an associated issue.** Branch names must follow this format:
+
+```
+xxx-issue-[number]
+```
+
+**Format breakdown:**
+- `xxx` - Short descriptive name (kebab-case, 2-4 words)
+- `issue-` - Literal text "issue-"
+- `[number]` - GitHub issue number
+
+**Examples:**
+```
+fix-path-refresh-issue-5
+update-claude-md-issue-7
+add-macos-support-issue-12
+refactor-git-config-issue-23
+```
+
+### Creating a New Branch
+
+When making a new change:
+
+1. **Ensure an issue exists** - If no issue exists, create one first (see GitHub Issue Management section)
+2. **Create branch from main** - Always branch from the latest `main` branch
+3. **Use the naming convention** - Format: `xxx-issue-[number]`
+4. **Keep branch focused** - One issue per branch, one branch per issue
+
+**Workflow:**
+```bash
+# Update main first
+git checkout main
+git pull origin main
+
+# Create new branch for issue #X
+git checkout -b descriptive-name-issue-X
+```
+
+### Branch Best Practices
+
+- **Never commit directly to main** - All changes go through branches and PRs
+- **Keep branches short-lived** - Merge within days, not weeks
+- **One issue per branch** - Don't mix unrelated changes
+- **Delete after merge** - Clean up merged branches promptly
+- **Sync with main regularly** - Rebase or merge main into long-lived branches
