@@ -328,3 +328,79 @@ Describe how the changes were tested
 - **Request review** - Tag reviewers if needed
 - **Respond to feedback** - Address review comments promptly
 - **Keep updated** - Sync with base branch if it changes during review
+
+## Tag and Release Management
+
+### Tag Naming Convention
+
+Tags must follow semantic versioning format:
+
+```
+vX.X.X
+```
+
+**Examples:**
+- `v0.1.0` - Initial release
+- `v0.1.2` - Patch release
+- `v1.0.0` - Major release
+- `v1.2.3` - Standard semantic version
+
+### Creating a Release
+
+After a PR is merged to `main`, follow this workflow to create a release:
+
+**1. Pull latest main:**
+```bash
+git checkout main
+git pull origin main
+```
+
+**2. Create annotated tag:**
+```bash
+git tag -a vX.X.X -m "Release vX.X.X: Brief description
+
+- Major changes
+- Important fixes
+- New features
+
+See CHANGELOG.md for full details"
+```
+
+**3. Create GitHub release:**
+```bash
+gh release create vX.X.X --title "vX.X.X: Title" --notes-file CHANGELOG.md
+```
+
+Or with inline notes:
+```bash
+gh release create vX.X.X --title "vX.X.X: Title" --notes "Release notes here"
+```
+
+**4. Clean up merged branch:**
+
+Delete the branch locally:
+```bash
+git branch -d branch-name-issue-X
+```
+
+Delete the branch on GitHub:
+```bash
+git push origin --delete branch-name-issue-X
+```
+
+Or use GitHub CLI:
+```bash
+gh pr view X --json headRefName -q .headRefName | xargs git branch -d
+gh pr view X --json headRefName -q .headRefName | xargs -I {} git push origin --delete {}
+```
+
+### Release Best Practices
+
+- **Use annotated tags only** - Never use lightweight tags for releases
+- **Follow semantic versioning** - Major.Minor.Patch (vX.X.X)
+- **Update CHANGELOG.md first** - Document all changes before releasing
+- **Create releases from main** - Always release from the main branch
+- **Include release notes** - Reference CHANGELOG.md or write comprehensive notes
+- **Clean up branches** - Delete merged branches after release
+- **Test before tagging** - Ensure main branch is stable before creating release
+- **One tag per release** - Don't move or delete tags once pushed
