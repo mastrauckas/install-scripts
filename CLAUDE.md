@@ -347,6 +347,8 @@ vX.X.X
 
 ### Creating a Release
 
+**Important: No tag can be created until the PR has been accepted and merged into `main`.**
+
 After a PR is merged to `main`, follow this workflow to create a release:
 
 **1. Pull latest main:**
